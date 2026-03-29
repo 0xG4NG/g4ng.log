@@ -1,0 +1,24 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>g4ng</h1>
+			<p>Docs, guías y notas sobre NixOS y Linux.</p>
+			<p>
+				Echa un vistazo al <a href="/blog">blog</a> para ver las publicaciones.
+			</p>
+		</main>
+		<Footer />
+	</body>
+</html>
