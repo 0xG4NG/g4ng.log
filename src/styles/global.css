@@ -706,6 +706,11 @@ a.side-item:hover { background: transparent; }
   max-width: min(70ch, 700px);
   margin: 0 auto;
 }
+.post-cover {
+  margin-bottom: 28px;
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
 .post-header {
   padding-bottom: 28px;
   margin-bottom: 36px;
