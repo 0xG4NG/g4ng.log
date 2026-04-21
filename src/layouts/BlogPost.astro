@@ -57,11 +57,6 @@ const tocItems = headings.filter(h => h.depth <= 3);
 	<body>
 		<Header />
 
-		<!-- Reading progress bar -->
-		<div class="progress-bar-wrap">
-			<div class="progress-bar" id="progress-bar"></div>
-		</div>
-
 		<div class="post-page">
 
 			<!-- Breadcrumb -->
@@ -167,15 +162,6 @@ const tocItems = headings.filter(h => h.depth <= 3);
 				<!-- RIGHT: Rail -->
 				<aside class="post-rail nb-margin">
 					<div class="rail-card">
-						<div class="rail-card-label">progress</div>
-						<div style="display:flex;align-items:center;gap:8px">
-							<span style="color:var(--accent);font-size:14px" id="rail-pct">0%</span>
-							<div class="rail-progress-bar" style="flex:1">
-								<div class="rail-progress-fill" id="rail-fill"></div>
-							</div>
-						</div>
-					</div>
-					<div class="rail-card">
 						<div class="rail-card-label">share</div>
 						<button class="rail-btn" id="copy-link-btn">copy link</button>
 						<a href="/rss.xml" class="rail-btn" style="text-decoration:none;border-bottom:1px solid var(--rule)">rss feed</a>
@@ -194,26 +180,6 @@ const tocItems = headings.filter(h => h.depth <= 3);
 		</div>
 
 		<script>
-			// Reading progress
-			const article = document.getElementById('post-article');
-			const bar = document.getElementById('progress-bar');
-			const railFill = document.getElementById('rail-fill');
-			const railPct = document.getElementById('rail-pct');
-
-			function updateProgress() {
-				if (!article) return;
-				const rect = article.getBoundingClientRect();
-				const top = window.scrollY + rect.top;
-				const total = article.scrollHeight - window.innerHeight + 200;
-				const p = Math.max(0, Math.min(1, (window.scrollY - top + 120) / Math.max(1, total)));
-				const pct = `${Math.round(p * 100)}%`;
-				if (bar) bar.style.width = pct;
-				if (railFill) railFill.style.width = pct;
-				if (railPct) railPct.textContent = pct;
-			}
-			window.addEventListener('scroll', updateProgress, { passive: true });
-			updateProgress();
-
 			// TOC active section via IntersectionObserver
 			const tocLinks = document.querySelectorAll<HTMLElement>('.toc-item[data-id]');
 			if (tocLinks.length) {
