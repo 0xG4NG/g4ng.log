@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -180,8 +181,11 @@ function fmtLong(d: Date): string {
 												<span class="read-hint">read ↗</span>
 											</div>
 										</div>
-										<div class="entry-read nb-entry-read">
-											{readingTime(post.body)}′
+										<div class="entry-thumb">
+											{post.data.heroImage
+												? <Image src={post.data.heroImage} alt={post.data.title} width={120} height={80} style="width:100%;height:100%;object-fit:cover;display:block;" />
+												: <span class="entry-read">{readingTime(post.body)}′</span>
+											}
 										</div>
 									</article>
 								))}

@@ -373,7 +373,7 @@ a.side-item:hover { background: transparent; }
 .nb-entry {
   position: relative;
   display: grid;
-  grid-template-columns: 118px 1fr 56px;
+  grid-template-columns: 118px 1fr 120px;
   gap: 22px;
   padding: 20px 14px 22px;
   margin-left: -14px;
@@ -460,6 +460,15 @@ a.side-item:hover { background: transparent; }
   color: var(--ink-3);
   text-align: right;
   padding-top: 4px;
+}
+.entry-thumb {
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  height: 80px;
+  background: var(--paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .no-results {
   font-family: var(--mono);
