@@ -1,114 +1,187 @@
 ---
-import { Image } from 'astro:assets';
 import { getCollection } from 'astro:content';
 import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import FormattedDate from '../../components/FormattedDate.astro';
 import Header from '../../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import Footer from '../../components/Footer.astro';
+import { SITE_TITLE } from '../../consts';
 
 const posts = (await getCollection('blog')).sort(
-	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
 );
+
+const tagCounts = new Map<string, number>();
+posts.forEach(p => (p.data.tags ?? []).forEach(t => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
+const sortedTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
+
+const byYear = new Map<number, typeof posts>();
+posts.forEach(p => {
+	const y = p.data.pubDate.getFullYear();
+	if (!byYear.has(y)) byYear.set(y, []);
+	byYear.get(y)!.push(p);
+});
+const years = Array.from(byYear.entries()).sort((a, b) => b[0] - a[0]);
+
+function shortHash(str: string): string {
+	let h = 0;
+	for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+	return h.toString(16).padStart(7, '0').slice(0, 7);
+}
+
+function readingTime(body: string | undefined): number {
+	if (!body) return 1;
+	return Math.max(1, Math.ceil(body.split(/\s+/).filter(Boolean).length / 200));
+}
+
+function fmtLong(d: Date): string {
+	return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase();
+}
 ---
 
 <!doctype html>
 <html lang="es">
 	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-		<style>
-			main {
-				width: 960px;
-			}
-			ul {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 2rem;
-				list-style-type: none;
-				margin: 0;
-				padding: 0;
-			}
-			ul li {
-				width: calc(50% - 1rem);
-			}
-			ul li * {
-				text-decoration: none;
-				transition: 0.2s ease;
-			}
-			ul li:first-child {
-				width: 100%;
-				margin-bottom: 1rem;
-				text-align: center;
-			}
-			ul li:first-child img {
-				width: 100%;
-			}
-			ul li:first-child .title {
-				font-size: 2.369rem;
-			}
-			ul li img {
-				margin-bottom: 0.5rem;
-				border-radius: 12px;
-			}
-			ul li a {
-				display: block;
-			}
-			.title {
-				margin: 0;
-				color: rgb(var(--black));
-				line-height: 1;
-			}
-			.date {
-				margin: 0;
-				color: rgb(var(--gray));
-			}
-			ul li a:hover h4,
-			ul li a:hover .date {
-				color: rgb(var(--accent));
-			}
-			ul a:hover img {
-				box-shadow: var(--box-shadow);
-			}
-			@media (max-width: 720px) {
-				ul {
-					gap: 0.5em;
-				}
-				ul li {
-					width: 100%;
-					text-align: center;
-				}
-				ul li:first-child {
-					margin-bottom: 0;
-				}
-				ul li:first-child .title {
-					font-size: 1.563em;
-				}
-			}
-		</style>
+		<BaseHead title={`Blog — ${SITE_TITLE}`} description="Todas las entradas del blog" />
 	</head>
 	<body>
 		<Header />
-		<main>
-			<section>
-				<ul>
-					{
-						posts.map((post) => (
-							<li>
-								<a href={`/blog/${post.id}/`}>
-									{post.data.heroImage && (
-										<Image width={720} height={360} src={post.data.heroImage} alt="" />
-									)}
-									<h4 class="title">{post.data.title}</h4>
-									<p class="date">
-										<FormattedDate date={post.data.pubDate} />
-									</p>
-								</a>
-							</li>
-						))
-					}
-				</ul>
-			</section>
-		</main>
-		<Footer />
+
+		<div class="blog-list-page">
+			<header class="blog-list-header">
+				<div style="font-family:var(--mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin-bottom:16px">
+					~/posts
+				</div>
+				<h1 class="blog-list-title">Blog</h1>
+				<p style="font-family:var(--serif);font-size:18px;font-style:italic;color:var(--ink-2);margin-top:12px;margin-bottom:0">
+					{posts.length} entradas · NixOS, Linux, Networking, Seguridad
+				</p>
+			</header>
+
+			<!-- Tags filter bar -->
+			<div style="padding:16px 0 8px;display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--rule-2);margin-bottom:4px">
+				{sortedTags.map(([tag, count]) => (
+					<button class="side-item tag-filter" data-tag={tag} style="width:auto;padding:3px 8px;border:1px dotted var(--rule);border-radius:2px">
+						#{tag} <span style="color:var(--ink-3);margin-left:4px">{count}</span>
+					</button>
+				))}
+				<input
+					id="search-input"
+					class="nb-search"
+					placeholder="buscar…"
+					style="border:1px dotted var(--rule);padding:3px 8px;border-radius:2px;flex:1;min-width:140px"
+					autocomplete="off"
+				/>
+			</div>
+
+			<div style="font-family:var(--mono);font-size:11px;color:var(--ink-3);padding:8px 0 4px;display:flex;gap:12px;align-items:center">
+				<span id="match-count">{posts.length}</span>
+				<span>match<span id="match-plural">es</span></span>
+				<button id="active-tag-chip" class="active-tag-chip" style="display:none"></button>
+			</div>
+
+			<!-- Posts by year -->
+			<div id="posts-list">
+				{years.map(([year, yearPosts]) => (
+					<div class="year-group" data-year={year}>
+						<div class="year-bar">
+							<span style="color:var(--accent)">──</span>
+							<span>YEAR · {year}</span>
+							<span class="year-line"></span>
+							<span>{yearPosts.length} entries</span>
+						</div>
+
+						{yearPosts.map(post => (
+							<article
+								class="nb-entry"
+								data-tags={(post.data.tags ?? []).join(' ')}
+								data-title={post.data.title.toLowerCase()}
+								data-desc={post.data.description.toLowerCase()}
+								onclick={`window.location='/blog/${post.id}'`}
+							>
+								<div>
+									<div class="entry-hash">commit {shortHash(post.id)}</div>
+									<div class="entry-date">{fmtLong(post.data.pubDate)}</div>
+								</div>
+								<div>
+									<span class="entry-cat">{post.data.category ?? 'Linux'}</span>
+									<h3 class="entry-title">
+										<a href={`/blog/${post.id}`} onclick="event.stopPropagation()">
+											{post.data.title}
+										</a>
+									</h3>
+									<p class="entry-excerpt">{post.data.description}</p>
+									<div class="entry-foot">
+										{(post.data.tags ?? []).map(tag => (
+											<span class="entry-tag tag-filter" data-tag={tag}>
+												#{tag}
+											</span>
+										))}
+										<span style="flex:1"></span>
+										<span class="read-hint">read ↗</span>
+									</div>
+								</div>
+								<div class="entry-read nb-entry-read">{readingTime(post.body)}′</div>
+							</article>
+						))}
+					</div>
+				))}
+			</div>
+
+			<div id="no-results" class="no-results" style="display:none">
+				<div>grep: no entries match</div>
+				<div>press <kbd>esc</kbd> to clear filters</div>
+			</div>
+
+			<Footer />
+		</div>
+
+		<script>
+			const searchInput = document.getElementById('search-input') as HTMLInputElement | null;
+			const matchCountEl = document.getElementById('match-count');
+			const matchPluralEl = document.getElementById('match-plural');
+			const noResultsEl = document.getElementById('no-results');
+			const activeTagChipEl = document.getElementById('active-tag-chip') as HTMLButtonElement | null;
+			let activeTag: string | null = null;
+
+			function applyFilters() {
+				const q = searchInput?.value.toLowerCase().trim() ?? '';
+				const entries = document.querySelectorAll<HTMLElement>('.nb-entry');
+				let visible = 0;
+				entries.forEach(entry => {
+					const tags = (entry.dataset.tags ?? '').split(' ').filter(Boolean);
+					const tagMatch = !activeTag || tags.includes(activeTag);
+					const searchMatch = !q || (entry.dataset.title ?? '').includes(q) || (entry.dataset.desc ?? '').includes(q) || tags.some(t => t.includes(q));
+					entry.style.display = (tagMatch && searchMatch) ? '' : 'none';
+					if (tagMatch && searchMatch) visible++;
+				});
+				document.querySelectorAll<HTMLElement>('.year-group').forEach(g => {
+					g.style.display = Array.from(g.querySelectorAll<HTMLElement>('.nb-entry')).some(e => e.style.display !== 'none') ? '' : 'none';
+				});
+				if (matchCountEl) matchCountEl.textContent = String(visible);
+				if (matchPluralEl) matchPluralEl.textContent = visible === 1 ? '' : 'es';
+				if (noResultsEl) noResultsEl.style.display = visible === 0 ? '' : 'none';
+				if (activeTagChipEl) {
+					activeTagChipEl.style.display = activeTag ? '' : 'none';
+					if (activeTag) activeTagChipEl.textContent = `#${activeTag} ✕`;
+				}
+				document.querySelectorAll<HTMLElement>('.tag-filter').forEach(el => {
+					el.classList.toggle('tag-active', el.dataset.tag === activeTag);
+				});
+			}
+
+			searchInput?.addEventListener('input', applyFilters);
+			document.querySelectorAll<HTMLElement>('.tag-filter').forEach(el => {
+				el.addEventListener('click', e => {
+					e.preventDefault();
+					e.stopPropagation();
+					activeTag = activeTag === el.dataset.tag ? null : (el.dataset.tag ?? null);
+					applyFilters();
+				});
+			});
+			activeTagChipEl?.addEventListener('click', () => { activeTag = null; applyFilters(); });
+			document.addEventListener('keydown', e => {
+				if (e.key === 'Escape') { activeTag = null; if (searchInput) searchInput.value = ''; applyFilters(); }
+				if (e.key === '/' && document.activeElement !== searchInput) { e.preventDefault(); searchInput?.focus(); }
+			});
+		</script>
 	</body>
 </html>

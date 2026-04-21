@@ -1,14 +1,59 @@
 ---
-import Layout from '../layouts/BlogPost.astro';
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE } from '../consts';
 ---
 
-<Layout
-	title="About"
-	description="Sobre mí"
-	pubDate={new Date('2026-03-29')}
->
-	<p>
-		Bienvenido a mi blog. Aquí publico guías y documentación sobre NixOS, Linux y
-		cosas que voy aprendiendo.
-	</p>
-</Layout>
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead
+			title={`About — ${SITE_TITLE}`}
+			description="Sobre g4ng, un estudiante de seguridad low-level documentando su aprendizaje"
+		/>
+	</head>
+	<body>
+		<Header />
+
+		<div class="about-page">
+			<header class="about-header">
+				<div class="about-label">~/about</div>
+				<h1 class="about-name">g4ng<span style="color:var(--accent)">.</span></h1>
+				<p class="about-tagline">
+					Estudiante de seguridad. Documentando el aprendizaje.
+				</p>
+			</header>
+
+			<div class="about-prose">
+				<p>
+					Soy un entusiasta de Linux y NixOS. Este blog es mi cuaderno público:
+					documento guías, configuraciones y soluciones a problemas que encuentro
+					en el día a día administrando sistemas.
+				</p>
+				<p>
+					Uso NixOS como sistema principal porque me permite tener configuraciones
+					declarativas, reproducibles y versionadas. Todo lo que necesito para
+					levantar una máquina está en un fichero <code>.nix</code>.
+				</p>
+
+				<h2>Temas del blog</h2>
+				<ul>
+					<li><strong>NixOS</strong> — Configuración del sistema, módulos, flakes</li>
+					<li><strong>Networking</strong> — Routers, firewalls, VPNs, DNS</li>
+					<li><strong>Homelab</strong> — Servicios self-hosted, contenedores, almacenamiento</li>
+					<li><strong>Linux</strong> — Administración, scripting, herramientas CLI</li>
+					<li><strong>Seguridad</strong> — CTF, reversing, análisis, vulnerabilidades</li>
+				</ul>
+
+				<h2>Contacto</h2>
+				<p>
+					Si tienes alguna duda o sugerencia, puedes encontrarme en GitHub como{' '}
+					<a href="https://github.com/g4ng" target="_blank" rel="noopener">@g4ng</a>.
+				</p>
+			</div>
+
+			<Footer />
+		</div>
+	</body>
+</html>

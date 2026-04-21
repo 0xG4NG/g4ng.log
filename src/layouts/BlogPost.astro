@@ -1,86 +1,262 @@
 ---
-import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE } from '../consts';
 
-type Props = CollectionEntry<'blog'>['data'];
+type Post = CollectionEntry<'blog'>;
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+interface Props {
+	title: string;
+	description: string;
+	pubDate: Date;
+	updatedDate?: Date;
+	tags: string[];
+	category: string;
+	headings: { depth: number; slug: string; text: string }[];
+	readingTime: number;
+	prev: Post | null;
+	next: Post | null;
+	related: Post[];
+	postId: string;
+}
+
+const {
+	title,
+	description,
+	pubDate,
+	updatedDate,
+	tags,
+	category,
+	headings,
+	readingTime,
+	prev,
+	next,
+	related,
+	postId,
+} = Astro.props;
+
+function shortHash(str: string): string {
+	let h = 0;
+	for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+	return h.toString(16).padStart(7, '0').slice(0, 7);
+}
+
+const fmtLong = (d: Date) =>
+	d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).toLowerCase();
+
+const tocItems = headings.filter(h => h.depth <= 3);
 ---
 
+<!doctype html>
 <html lang="es">
 	<head>
-		<BaseHead title={title} description={description} />
-		<style>
-			main {
-				width: calc(100% - 2em);
-				max-width: 100%;
-				margin: 0;
-			}
-			.hero-image {
-				width: 100%;
-			}
-			.hero-image img {
-				display: block;
-				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
-			}
-			.prose {
-				width: 720px;
-				max-width: calc(100% - 2em);
-				margin: auto;
-				padding: 1em;
-				color: rgb(var(--gray-dark));
-			}
-			.title {
-				margin-bottom: 1em;
-				padding: 1em 0;
-				text-align: center;
-				line-height: 1;
-			}
-			.title h1 {
-				margin: 0 0 0.5em 0;
-			}
-			.date {
-				margin-bottom: 0.5em;
-				color: rgb(var(--gray));
-			}
-			.last-updated-on {
-				font-style: italic;
-			}
-		</style>
+		<BaseHead title={`${title} — ${SITE_TITLE}`} description={description} />
 	</head>
-
 	<body>
 		<Header />
-		<main>
-			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
-				</div>
-				<div class="prose">
-					<div class="title">
-						<div class="date">
-							<FormattedDate date={pubDate} />
-							{
-								updatedDate && (
-									<div class="last-updated-on">
-										Last updated on <FormattedDate date={updatedDate} />
-									</div>
-								)
-							}
-						</div>
-						<h1>{title}</h1>
-						<hr />
+
+		<!-- Reading progress bar -->
+		<div class="progress-bar-wrap">
+			<div class="progress-bar" id="progress-bar"></div>
+		</div>
+
+		<div class="post-page">
+
+			<!-- Breadcrumb -->
+			<nav class="post-crumb">
+				<a href="/">← back</a>
+				<span class="crumb-sep">/</span>
+				<a href="/blog">~/posts</a>
+				<span class="crumb-sep">/</span>
+				<span style="color:var(--ink)">{postId}.md</span>
+				<span style="flex:1"></span>
+				<span>reading time · {readingTime} min</span>
+			</nav>
+
+			<div class="post-body nb-body">
+
+				<!-- LEFT: TOC -->
+				<aside class="post-toc nb-sidebar">
+					<div class="toc-head">contents</div>
+					{tocItems.map(h => (
+						<a
+							href={`#${h.slug}`}
+							class="toc-item"
+							data-id={h.slug}
+							style={h.depth === 3 ? 'padding-left: 18px; font-size: 10px;' : ''}
+						>
+							{h.text}
+						</a>
+					))}
+					<div class="toc-meta">meta</div>
+					<div class="toc-info">
+						<div>commit <span style="color:var(--accent)">{shortHash(postId)}</span></div>
+						<div>status · reviewed</div>
+						{updatedDate && <div>updated · {fmtLong(updatedDate)}</div>}
 					</div>
-					<slot />
-				</div>
-			</article>
-		</main>
-		<Footer />
+				</aside>
+
+				<!-- MAIN: Article -->
+				<article class="post-article" id="post-article">
+					<header class="post-header">
+						<span class="post-cat">{category} · notes</span>
+						<h1 class="post-title">{title}</h1>
+						<p class="post-kicker">{description}</p>
+						<div class="post-meta">
+							<span>by <span style="color:var(--ink-2)">g4ng</span></span>
+							<span>·</span>
+							<span>{fmtLong(pubDate)}</span>
+							<span>·</span>
+							<span>{readingTime} min</span>
+							<span>·</span>
+							<span>
+								{tags.map(t => (
+									<span class="post-tag-inline">#{t} </span>
+								))}
+							</span>
+							<button class="permalink-btn" id="permalink-btn">¶ permalink</button>
+						</div>
+					</header>
+
+					<div class="post-prose">
+						<slot />
+					</div>
+
+					<!-- Prev / Next -->
+					{(prev || next) && (
+						<nav class="prev-next">
+							{prev ? (
+								<a href={`/blog/${prev.id}`} class="pn-box">
+									<div class="pn-label">← previous</div>
+									<div class="pn-title">{prev.data.title}</div>
+								</a>
+							) : <div></div>}
+							{next ? (
+								<a href={`/blog/${next.id}`} class="pn-box" style="text-align:right">
+									<div class="pn-label">next →</div>
+									<div class="pn-title">{next.data.title}</div>
+								</a>
+							) : <div></div>}
+						</nav>
+					)}
+
+					<!-- Related posts -->
+					{related.length > 0 && (
+						<section class="related-section">
+							<div class="related-header">
+								<h2>Related</h2>
+								<span>// by tag</span>
+							</div>
+							<div class="related-grid">
+								{related.map(r => (
+									<a href={`/blog/${r.id}`} class="related-cell">
+										<div class="related-cat">{r.data.category}</div>
+										<div class="related-title">{r.data.title}</div>
+										<div class="related-desc">{r.data.description}</div>
+									</a>
+								))}
+							</div>
+						</section>
+					)}
+
+					<Footer />
+				</article>
+
+				<!-- RIGHT: Rail -->
+				<aside class="post-rail nb-margin">
+					<div class="rail-card">
+						<div class="rail-card-label">progress</div>
+						<div style="display:flex;align-items:center;gap:8px">
+							<span style="color:var(--accent);font-size:14px" id="rail-pct">0%</span>
+							<div class="rail-progress-bar" style="flex:1">
+								<div class="rail-progress-fill" id="rail-fill"></div>
+							</div>
+						</div>
+					</div>
+					<div class="rail-card">
+						<div class="rail-card-label">share</div>
+						<button class="rail-btn" id="copy-link-btn">copy link</button>
+						<a href="/rss.xml" class="rail-btn" style="text-decoration:none;border-bottom:1px solid var(--rule)">rss feed</a>
+					</div>
+					<div class="rail-card">
+						<div class="rail-card-label" style="margin-bottom:4px">tags</div>
+						{tags.map(t => (
+							<div style="font-family:var(--mono);font-size:11px;color:var(--accent);line-height:1.9">
+								#{t}
+							</div>
+						))}
+					</div>
+				</aside>
+
+			</div>
+		</div>
+
+		<script>
+			// Reading progress
+			const article = document.getElementById('post-article');
+			const bar = document.getElementById('progress-bar');
+			const railFill = document.getElementById('rail-fill');
+			const railPct = document.getElementById('rail-pct');
+
+			function updateProgress() {
+				if (!article) return;
+				const rect = article.getBoundingClientRect();
+				const top = window.scrollY + rect.top;
+				const total = article.scrollHeight - window.innerHeight + 200;
+				const p = Math.max(0, Math.min(1, (window.scrollY - top + 120) / Math.max(1, total)));
+				const pct = `${Math.round(p * 100)}%`;
+				if (bar) bar.style.width = pct;
+				if (railFill) railFill.style.width = pct;
+				if (railPct) railPct.textContent = pct;
+			}
+			window.addEventListener('scroll', updateProgress, { passive: true });
+			updateProgress();
+
+			// TOC active section via IntersectionObserver
+			const tocLinks = document.querySelectorAll<HTMLElement>('.toc-item[data-id]');
+			if (tocLinks.length) {
+				const obs = new IntersectionObserver(entries => {
+					entries.forEach(entry => {
+						if (entry.isIntersecting) {
+							tocLinks.forEach(l => l.classList.toggle('active', l.dataset.id === entry.target.id));
+						}
+					});
+				}, { rootMargin: '-10% 0% -70% 0%' });
+
+				document.querySelectorAll<HTMLElement>('h2[id], h3[id]').forEach(h => obs.observe(h));
+			}
+
+			// Permalink copy
+			const permalinkBtn = document.getElementById('permalink-btn');
+			const copyLinkBtn = document.getElementById('copy-link-btn');
+			function copyUrl() {
+				navigator.clipboard.writeText(window.location.href).catch(() => {});
+				if (permalinkBtn) { permalinkBtn.textContent = 'copied ✓'; setTimeout(() => { if (permalinkBtn) permalinkBtn.textContent = '¶ permalink'; }, 1400); }
+				if (copyLinkBtn) { copyLinkBtn.textContent = 'copied ✓'; setTimeout(() => { if (copyLinkBtn) copyLinkBtn.textContent = 'copy link'; }, 1400); }
+			}
+			permalinkBtn?.addEventListener('click', copyUrl);
+			copyLinkBtn?.addEventListener('click', copyUrl);
+
+			// Copy buttons on code blocks
+			document.querySelectorAll<HTMLElement>('pre.astro-code').forEach(pre => {
+				const btn = document.createElement('button');
+				btn.className = 'code-copy-btn';
+				btn.textContent = 'copy';
+				pre.style.position = 'relative';
+				pre.appendChild(btn);
+				btn.addEventListener('click', async () => {
+					const code = pre.querySelector('code');
+					if (code) {
+						try {
+							await navigator.clipboard.writeText(code.textContent ?? '');
+							btn.textContent = 'copied ✓';
+							setTimeout(() => { btn.textContent = 'copy'; }, 1400);
+						} catch {}
+					}
+				});
+			});
+		</script>
 	</body>
 </html>

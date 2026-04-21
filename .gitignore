@@ -1,4 +1,28 @@
+# Dependencias
 node_modules/
+
+# Build
 dist/
 .astro/
+
+# Entorno
 .env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# Claude Code
+skills/
+.claude/

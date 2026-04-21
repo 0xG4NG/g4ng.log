@@ -3,18 +3,47 @@ import { type CollectionEntry, getCollection, render } from 'astro:content';
 import BlogPost from '../../layouts/BlogPost.astro';
 
 export async function getStaticPaths() {
-	const posts = await getCollection('blog');
-	return posts.map((post) => ({
+	const posts = (await getCollection('blog')).sort(
+		(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+	);
+	return posts.map((post, index) => ({
 		params: { slug: post.id },
-		props: post,
+		props: {
+			post,
+			prev: posts[index + 1] ?? null,
+			next: posts[index - 1] ?? null,
+		},
 	}));
 }
-type Props = CollectionEntry<'blog'>;
 
-const post = Astro.props;
-const { Content } = await render(post);
+interface Props {
+	post: CollectionEntry<'blog'>;
+	prev: CollectionEntry<'blog'> | null;
+	next: CollectionEntry<'blog'> | null;
+}
+
+const { post, prev, next } = Astro.props;
+
+const allPosts = await getCollection('blog');
+const related = allPosts
+	.filter(p => p.id !== post.id && post.data.tags.some(t => (p.data.tags ?? []).includes(t)))
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+	.slice(0, 4);
+
+const wordCount = post.body ? post.body.split(/\s+/).filter(Boolean).length : 0;
+const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+
+const { Content, headings } = await render(post);
 ---
 
-<BlogPost {...post.data}>
+<BlogPost
+	{...post.data}
+	headings={headings}
+	readingTime={readingTime}
+	prev={prev}
+	next={next}
+	related={related}
+	postId={post.id}
+>
 	<Content />
 </BlogPost>

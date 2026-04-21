@@ -1,47 +1,31 @@
 ---
-import { SITE_TITLE } from '../consts';
-import HeaderLink from './HeaderLink.astro';
 ---
-
-<header>
-	<nav>
-		<h2><a href="/">{SITE_TITLE}</a></h2>
-		<div class="internal-links">
-			<HeaderLink href="/">Home</HeaderLink>
-			<HeaderLink href="/blog">Blog</HeaderLink>
-			<HeaderLink href="/about">About</HeaderLink>
-		</div>
-	</nav>
+<header class="shell-top">
+	<div class="shell-inner">
+		<a href="/" class="brand">g4ng/blog</a>
+		<span class="sep"></span>
+		<span class="muted"><kbd>esc</kbd> clear filters</span>
+		<span class="spacer"></span>
+		<button class="theme-btn" id="theme-toggle" aria-label="Toggle theme">◑ dark</button>
+	</div>
 </header>
-<style>
-	header {
-		margin: 0;
-		padding: 0 1em;
-		background: white;
-		box-shadow: 0 2px 8px rgba(var(--black), 5%);
-	}
-	h2 {
-		margin: 0;
-		font-size: 1em;
+
+<script>
+	const btn = document.getElementById('theme-toggle');
+	const html = document.documentElement;
+
+	function getTheme(): string {
+		return html.getAttribute('data-theme') || 'dark';
 	}
 
-	h2 a,
-	h2 a.active {
-		text-decoration: none;
+	function setTheme(t: string) {
+		html.setAttribute('data-theme', t);
+		localStorage.setItem('theme', t);
+		if (btn) btn.textContent = t === 'dark' ? '◑ dark' : '◐ light';
 	}
-	nav {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
+
+	if (btn) {
+		btn.textContent = getTheme() === 'dark' ? '◑ dark' : '◐ light';
+		btn.addEventListener('click', () => setTheme(getTheme() === 'dark' ? 'light' : 'dark'));
 	}
-	nav a {
-		padding: 1em 0.5em;
-		color: var(--black);
-		border-bottom: 4px solid transparent;
-		text-decoration: none;
-	}
-	nav a.active {
-		text-decoration: none;
-		border-bottom-color: var(--accent);
-	}
-</style>
+</script>

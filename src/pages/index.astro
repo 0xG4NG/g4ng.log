@@ -1,8 +1,42 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+
+const posts = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+// Build tag counts
+const tagCounts = new Map<string, number>();
+posts.forEach(p => (p.data.tags ?? []).forEach(t => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
+const sortedTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
+
+// Group by year
+const byYear = new Map<number, typeof posts>();
+posts.forEach(p => {
+	const y = p.data.pubDate.getFullYear();
+	if (!byYear.has(y)) byYear.set(y, []);
+	byYear.get(y)!.push(p);
+});
+const years = Array.from(byYear.entries()).sort((a, b) => b[0] - a[0]);
+
+function shortHash(str: string): string {
+	let h = 0;
+	for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+	return h.toString(16).padStart(7, '0').slice(0, 7);
+}
+
+function readingTime(body: string | undefined): number {
+	if (!body) return 1;
+	return Math.max(1, Math.ceil(body.split(/\s+/).filter(Boolean).length / 200));
+}
+
+function fmtLong(d: Date): string {
+	return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase();
+}
 ---
 
 <!doctype html>
@@ -12,13 +46,310 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 	</head>
 	<body>
 		<Header />
-		<main>
-			<h1>g4ng</h1>
-			<p>Docs, guías y notas sobre NixOS y Linux.</p>
-			<p>
-				Echa un vistazo al <a href="/blog">blog</a> para ver las publicaciones.
-			</p>
-		</main>
-		<Footer />
+
+		<div class="nb-page">
+
+			<!-- ===== MASTHEAD ===== -->
+			<header class="nb-masthead">
+				<div class="nb-mastgrid">
+					<div>
+						<h1 class="nb-brand-big">g4ng<span class="brand-dot">.</span>log</h1>
+						<div class="nb-brand-under">
+							/lab-notebook · vol. I · entries {posts.length}
+						</div>
+					</div>
+					<div class="nb-callout">
+						<span class="prompt">$</span> <span style="color:var(--ink)">whoami</span><br/>
+						g4ng — low-level notes from a security student.<br/>
+						<span class="prompt">$</span> <span style="color:var(--ink)">cat /etc/motd</span><br/>
+						<span class="ink-2">
+							this is a research notebook. posts are drafts until they aren't.<br/>
+							nothing here is a tutorial. everything here is me being wrong,<br/>
+							then a little less wrong.
+						</span>
+					</div>
+				</div>
+				<div class="nb-metastrip">
+					<span class="meta-item">sys: <span class="ink-2">nixos 25.11</span></span>
+					<span class="meta-item">loc: <span class="ink-2">EU / UTC+1</span></span>
+					<span class="meta-item">since: <span class="ink-2">2024</span></span>
+					<span class="meta-item">pgp: <span class="ink-2">0xDEAD…BEEF</span></span>
+					<span style="flex:1"></span>
+					<span style="color:var(--accent)">● </span>
+					<span class="ink-2" id="utc-clock">loading…</span>
+				</div>
+			</header>
+
+			<!-- ===== BODY: 3-COLUMN ===== -->
+			<div class="nb-body">
+
+				<!-- LEFT SIDEBAR -->
+				<aside class="nb-sidebar">
+					<div class="side-section">
+						<div class="side-h"><span class="side-dot"></span>index</div>
+						<div class="side-item active-item">
+							<span>~/posts</span><span>{posts.length}</span>
+						</div>
+						<a href="/about" class="side-item">
+							<span>~/about</span><span>·</span>
+						</a>
+						<a href="/rss.xml" class="side-item">
+							<span>~/rss.xml</span><span>↗</span>
+						</a>
+					</div>
+
+					<div class="side-section">
+						<div class="side-h"><span class="side-dot"></span>tags · count</div>
+						{sortedTags.slice(0, 14).map(([tag, count]) => (
+							<button class="side-item tag-filter" data-tag={tag}>
+								<span>#{tag}</span><span>{count}</span>
+							</button>
+						))}
+					</div>
+
+					<div class="side-section">
+						<div class="side-h"><span class="side-dot"></span>/now</div>
+						<div class="now-box">
+							Escribiendo sobre NixOS, networking y seguridad low-level.
+							<div style="margin-top:10px;color:var(--ink-3);font-size:10px;letter-spacing:0.08em">
+								↳ updated recently
+							</div>
+						</div>
+					</div>
+
+					<div class="side-section">
+						<div class="side-h"><span class="side-dot"></span>keys</div>
+						<div class="keys-list">
+							<div><kbd>/</kbd> search</div>
+							<div><kbd>esc</kbd> clear</div>
+							<div><kbd>j</kbd> / <kbd>k</kbd> nav</div>
+						</div>
+					</div>
+				</aside>
+
+				<!-- MAIN COLUMN -->
+				<main>
+					<!-- Lead -->
+					<section class="nb-lead">
+						<div class="lead-label">── lab notebook · page 1 ──</div>
+						<h2 class="nb-lead-title">
+							Field notes on low-level<br/>
+							things I'm trying to<br/>
+							<em style="color:var(--accent);font-style:italic">actually</em> understand.
+						</h2>
+						<p class="lead-intro">
+							NixOS, redes, kernel, seguridad. Escrito mientras aprendo,
+							corregido cuando me equivoco. Busca, filtra por tag, o simplemente
+							lee lo último.
+						</p>
+					</section>
+
+					<!-- Search toolbar -->
+					<div class="nb-toolbar">
+						<span class="prompt" style="font-weight:500">$</span>
+						<span class="ink-3">grep</span>
+						<span class="ink-3">-irn</span>
+						<input
+							class="nb-search"
+							id="search-input"
+							placeholder='"nixos" posts/'
+							autocomplete="off"
+						/>
+						<button id="active-tag-chip" class="active-tag-chip" style="display:none"></button>
+						<span class="ink-3">│</span>
+						<span class="ink-2">
+							<span id="match-count">{posts.length}</span>
+							match<span id="match-plural">es</span>
+						</span>
+					</div>
+
+					<!-- Posts grouped by year -->
+					<div id="posts-list">
+						{years.map(([year, yearPosts]) => (
+							<div class="year-group" data-year={year}>
+								<div class="year-bar">
+									<span style="color:var(--accent)">──</span>
+									<span>YEAR · {year}</span>
+									<span class="year-line"></span>
+									<span class="year-count">{yearPosts.length} entries</span>
+								</div>
+
+								{yearPosts.map(post => (
+									<article
+										class="nb-entry"
+										data-tags={(post.data.tags ?? []).join(' ')}
+										data-title={post.data.title.toLowerCase()}
+										data-desc={post.data.description.toLowerCase()}
+										onclick={`window.location='/blog/${post.id}'`}
+									>
+										<div>
+											<div class="entry-hash">commit {shortHash(post.id)}</div>
+											<div class="entry-date">{fmtLong(post.data.pubDate)}</div>
+										</div>
+										<div>
+											<span class="entry-cat">{post.data.category ?? 'Linux'}</span>
+											<h3 class="entry-title">
+												<a href={`/blog/${post.id}`} onclick="event.stopPropagation()">
+													{post.data.title}
+												</a>
+											</h3>
+											<p class="entry-excerpt">{post.data.description}</p>
+											<div class="entry-foot">
+												{(post.data.tags ?? []).map(tag => (
+													<span
+														class="entry-tag tag-filter"
+														data-tag={tag}
+													>#{tag}</span>
+												))}
+												<span style="flex:1"></span>
+												<span class="read-hint">read ↗</span>
+											</div>
+										</div>
+										<div class="entry-read nb-entry-read">
+											{readingTime(post.body)}′
+										</div>
+									</article>
+								))}
+							</div>
+						))}
+					</div>
+
+					<div id="no-results" class="no-results" style="display:none">
+						<div>grep: no entries match</div>
+						<div>press <kbd>esc</kbd> to clear filters</div>
+					</div>
+
+					<Footer />
+				</main>
+
+				<!-- RIGHT MARGIN NOTES -->
+				<aside class="nb-margin">
+					<div class="margin-note">
+						<div class="margin-label">note · α</div>
+						<div class="margin-body">
+							Todo aquí es trabajo en progreso. Si me equivoco en algo, el post
+							recibe un erratum — no una edición silenciosa.
+						</div>
+					</div>
+					<div class="margin-note">
+						<div class="margin-label">note · β</div>
+						<div class="margin-body">
+							Escrito en neovim, en NixOS, que puedo reconstruir en 90 segundos.
+						</div>
+					</div>
+					<div class="margin-note">
+						<div class="margin-label">build</div>
+						<div class="margin-body" style="font-family:var(--mono);font-size:11px;font-style:normal">
+							<span style="color:var(--accent)">●</span> passing<br/>
+							built with Astro<br/>
+							commit <span style="color:var(--accent)">{shortHash('g4ng')}</span>
+						</div>
+					</div>
+				</aside>
+
+			</div>
+		</div>
+
+		<script>
+			// Live UTC clock
+			function tick() {
+				const now = new Date();
+				const p = (n: number) => String(n).padStart(2, '0');
+				const s = `${now.getUTCFullYear()}-${p(now.getUTCMonth()+1)}-${p(now.getUTCDate())} ${p(now.getUTCHours())}:${p(now.getUTCMinutes())}:${p(now.getUTCSeconds())} UTC`;
+				const el = document.getElementById('utc-clock');
+				if (el) el.textContent = s;
+			}
+			tick();
+			setInterval(tick, 1000);
+
+			// Search + tag filter
+			const searchInput = document.getElementById('search-input') as HTMLInputElement | null;
+			const matchCountEl = document.getElementById('match-count');
+			const matchPluralEl = document.getElementById('match-plural');
+			const noResultsEl = document.getElementById('no-results');
+			const activeTagChipEl = document.getElementById('active-tag-chip') as HTMLButtonElement | null;
+
+			let activeTag: string | null = null;
+
+			function applyFilters() {
+				const q = searchInput?.value.toLowerCase().trim() ?? '';
+				const entries = document.querySelectorAll<HTMLElement>('.nb-entry');
+				let visible = 0;
+
+				entries.forEach(entry => {
+					const tags = (entry.dataset.tags ?? '').split(' ').filter(Boolean);
+					const title = entry.dataset.title ?? '';
+					const desc = entry.dataset.desc ?? '';
+					const tagMatch = !activeTag || tags.includes(activeTag);
+					const searchMatch = !q || title.includes(q) || desc.includes(q) || tags.some(t => t.includes(q));
+					if (tagMatch && searchMatch) {
+						entry.style.display = '';
+						visible++;
+					} else {
+						entry.style.display = 'none';
+					}
+				});
+
+				// Hide empty year groups
+				document.querySelectorAll<HTMLElement>('.year-group').forEach(group => {
+					const hasVisible = Array.from(group.querySelectorAll<HTMLElement>('.nb-entry'))
+						.some(e => e.style.display !== 'none');
+					group.style.display = hasVisible ? '' : 'none';
+				});
+
+				if (matchCountEl) matchCountEl.textContent = String(visible);
+				if (matchPluralEl) matchPluralEl.textContent = visible === 1 ? '' : 'es';
+				if (noResultsEl) noResultsEl.style.display = visible === 0 ? '' : 'none';
+
+				// Tag chip
+				if (activeTagChipEl) {
+					if (activeTag) {
+						activeTagChipEl.style.display = '';
+						activeTagChipEl.textContent = `#${activeTag} ✕`;
+					} else {
+						activeTagChipEl.style.display = 'none';
+					}
+				}
+
+				// Sidebar + entry tag highlight
+				document.querySelectorAll<HTMLElement>('.tag-filter').forEach(el => {
+					if (el.dataset.tag === activeTag) {
+						el.classList.add('tag-active');
+					} else {
+						el.classList.remove('tag-active');
+					}
+				});
+			}
+
+			searchInput?.addEventListener('input', applyFilters);
+
+			document.querySelectorAll<HTMLElement>('.tag-filter').forEach(el => {
+				el.addEventListener('click', e => {
+					e.preventDefault();
+					e.stopPropagation();
+					const tag = el.dataset.tag ?? null;
+					activeTag = activeTag === tag ? null : tag;
+					applyFilters();
+				});
+			});
+
+			activeTagChipEl?.addEventListener('click', () => {
+				activeTag = null;
+				applyFilters();
+			});
+
+			// Keyboard shortcuts
+			document.addEventListener('keydown', e => {
+				if (e.key === 'Escape') {
+					activeTag = null;
+					if (searchInput) searchInput.value = '';
+					applyFilters();
+				}
+				if (e.key === '/' && document.activeElement !== searchInput) {
+					e.preventDefault();
+					searchInput?.focus();
+				}
+			});
+		</script>
 	</body>
 </html>
