@@ -37,10 +37,17 @@ const {
 	postId,
 } = Astro.props;
 
-function shortHash(str: string): string {
-	let h = 0;
-	for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-	return h.toString(16).padStart(7, '0').slice(0, 7);
+import { execSync } from 'node:child_process';
+
+function gitHash(postId: string): string {
+	try {
+		return execSync(
+			`git log -1 --format=%h -- src/content/blog/${postId}.md`,
+			{ encoding: 'utf8' }
+		).trim() || 'unknown';
+	} catch {
+		return 'unknown';
+	}
 }
 
 const fmtLong = (d: Date) =>
@@ -87,7 +94,7 @@ const tocItems = headings.filter(h => h.depth <= 3);
 					))}
 					<div class="toc-meta">meta</div>
 					<div class="toc-info">
-						<div>commit <span style="color:var(--accent)">{shortHash(postId)}</span></div>
+						<div>commit <span style="color:var(--accent)">{gitHash(postId)}</span></div>
 						<div>status · reviewed</div>
 						{updatedDate && <div>updated · {fmtLong(updatedDate)}</div>}
 					</div>
